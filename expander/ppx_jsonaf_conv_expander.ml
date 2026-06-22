@@ -68,14 +68,14 @@ let error_function ~(config : Config.t) ~loc name =
        (Ldot (Ldot (Lident "Ppx_jsonaf_conv_lib", "Jsonaf_conv_error"), name)))
 ;;
 
-let wrap_with_exclave ~loc expr = [%expr [%e expr]]
+let wrap_with_exclave ~loc:_ expr = [%expr [%e expr]]
 
 let pexp_function_with_exclaves ~loc cases =
   let cases =
     List.map cases ~f:(fun case ->
       { case with pc_rhs = wrap_with_exclave ~loc:case.pc_rhs.pexp_loc case.pc_rhs })
   in
-  pexp_function ~loc cases
+  pexp_function_cases ~loc cases
 ;;
 
 let maybe_wrap_with_exclave ~(config : Config.t) ~loc expr =
@@ -85,7 +85,7 @@ let maybe_wrap_with_exclave ~(config : Config.t) ~loc expr =
 let pexp_function_maybe_exclave ~(config : Config.t) ~loc cases =
   if config.exclave_regions
   then pexp_function_with_exclaves ~loc cases
-  else pexp_function ~loc cases
+  else pexp_function_cases ~loc cases
 ;;
 
 let ( --> ) lhs rhs = case ~guard:None ~lhs ~rhs
@@ -123,7 +123,7 @@ module Fun_or_match = struct
   let expr ~loc t =
     match t with
     | Fun f -> f
-    | Match cases -> pexp_function ~loc cases
+    | Match cases -> pexp_function_cases ~loc cases
   ;;
 
   let unroll ~loc e t =
@@ -1138,7 +1138,7 @@ module Str_generate_jsonaf_of = struct
         (* Prevent violation of value restriction and problems with recursive types by
            eta-expanding function definitions *)
         | Fun fun_expr -> [%expr fun v -> [%e eapply ~loc fun_expr [ [%expr v] ]]]
-        | Match matchings -> pexp_function ~loc matchings)
+        | Match matchings -> pexp_function_cases ~loc matchings)
     in
     let typ = Sig_generate_jsonaf_of.mk_type td in
     let func_name = "jsonaf_of_" ^ type_name in
